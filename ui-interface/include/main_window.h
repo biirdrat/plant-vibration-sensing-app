@@ -2,7 +2,9 @@
 #define MAIN_WINDOW_H
 
 #include "Logger.h"
+#include "http_client_worker.h"
 #include <QMainWindow>
+#include <QThread>
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QChart>
@@ -31,6 +33,7 @@ private:
     Ui::MainWindow *ui;
 
 private:
+    QThread *httpClientThread;
     QChart *chart;
     QLineSeries *series;
     QChartView *chartView;
