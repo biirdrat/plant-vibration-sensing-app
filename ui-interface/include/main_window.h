@@ -2,6 +2,7 @@
 #define MAIN_WINDOW_H
 
 #include "Logger.h"
+#include"data_plotter.h"
 #include "http_client_worker.h"
 #include <QMainWindow>
 #include <QThread>
@@ -25,19 +26,18 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    
-    void initializeChart();
-    Logger* logger;
 
 private:
     Ui::MainWindow *ui;
 
 private:
+    Logger* logger;
+    DataPlotter* dataPlotter;
     QThread *httpClientThread;
-    QChart *chart;
-    QLineSeries *series;
-    QChartView *chartView;
-
+    // QChart *chart;
+    // QLineSeries *series;
+    // QChartView *chartView;
+    
 private slots:
     void onLogMessage(LogLevel log_level, const QString& formatted_message);
 };

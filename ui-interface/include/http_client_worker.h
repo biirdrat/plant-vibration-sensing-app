@@ -6,7 +6,6 @@
 class HttpClientWorker : public QObject
 {
     Q_OBJECT
-
 };
 
 #endif
