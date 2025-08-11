@@ -40,7 +40,7 @@ void MainWindow::initializeChart()
     chart->createDefaultAxes();
 
     // Create chart view
-    chartView = new QChartView(chart);
+    chartView = new QChartView(chart, this);
     chartView->setMinimumSize(550, 400);
     chartView->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
     chartView->setRenderHint(QPainter::Antialiasing);
