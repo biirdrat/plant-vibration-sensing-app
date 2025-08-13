@@ -6,6 +6,7 @@
 #include "http_client_worker.h"
 #include <QMainWindow>
 #include <QThread>
+#include <QTimer>
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QChart>
@@ -26,6 +27,10 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void initializeHttpClientThread();
+    void startHttpClientThread();
+    void stopHttpClientThread();
+    void onMainLoopTick();
 
 private:
     Ui::MainWindow *ui;
@@ -34,10 +39,9 @@ private:
     Logger* logger;
     DataPlotter* dataPlotter;
     QThread *httpClientThread;
-    // QChart *chart;
-    // QLineSeries *series;
-    // QChartView *chartView;
-    
+    HttpClientWorker *httpClientWorker;
+    QTimer *mainLoopTimer;
+
 private slots:
     void onLogMessage(LogLevel log_level, const QString& formatted_message);
 };

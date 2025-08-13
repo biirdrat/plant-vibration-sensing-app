@@ -8,12 +8,21 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , logger(&Logger::getInstance())
+    , mainLoopTimer(new QTimer())
 {
     ui->setupUi(this);
 
     connect(logger, &Logger::logMessageSignal, this, &MainWindow::onLogMessage);
 
     dataPlotter = new DataPlotter(ui->graph_layout, this);
+
+    initializeHttpClientThread();
+
+    startHttpClientThread();
+
+    connect(mainLoopTimer, &QTimer::timeout, this, &MainWindow::onMainLoopTick);
+    
+    mainLoopTimer->start(1000);
 
     logger->log(LogLevel::Info, "Main Application Loaded Successfully!");
 }
@@ -60,4 +69,35 @@ void MainWindow::onLogMessage(LogLevel log_level, const QString& formatted_messa
 
     // Auto-scroll to bottom
     ui->log_table->scrollToBottom();
+}
+
+void MainWindow::initializeHttpClientThread()
+{
+    httpClientThread = new QThread(this);
+    
+    httpClientWorker = new HttpClientWorker();
+
+    httpClientWorker->moveToThread(httpClientThread);
+
+    connect(httpClientThread, &QThread::started, httpClientWorker, &HttpClientWorker::doWork);
+
+    connect(httpClientWorker, &HttpClientWorker::finished, httpClientThread, &QThread::quit);
+}
+
+void MainWindow::startHttpClientThread()
+{
+    if (!httpClientThread->isRunning())
+    {
+        httpClientThread->start();
+    }
+}
+
+void MainWindow::stopHttpClientThread()
+{
+    httpClientThread->requestInterruption();
+}
+
+void MainWindow::onMainLoopTick()
+{
+    std::cout << httpClientThread->isRunning() << std::endl;
 }
