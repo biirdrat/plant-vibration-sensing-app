@@ -1,6 +1,5 @@
 #include "main_window.h"
 #include "ui_main_window.h"
-#include <iostream>
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -10,6 +9,8 @@ MainWindow::MainWindow(QWidget *parent)
     , logger(&Logger::getInstance())
     , mainLoopTimer(new QTimer())
 {
+    qRegisterMetaType<LogLevel>("LogLevel");
+
     ui->setupUi(this);
 
     connect(logger, &Logger::logMessageSignal, this, &MainWindow::onLogMessage);
@@ -53,7 +54,7 @@ void MainWindow::onLogMessage(LogLevel log_level, const QString& formatted_messa
         case LogLevel::Info:
             textColor = QColor(70, 153, 47);
             break;
-        case LogLevel::Warn:
+        case LogLevel::Warning:
             textColor = QColor(255, 163, 5);
             break;
         case LogLevel::Error:
@@ -79,14 +80,14 @@ void MainWindow::initializeHttpClientThread()
 
     httpClientWorker->moveToThread(httpClientThread);
 
-    connect(httpClientThread, &QThread::started, httpClientWorker, &HttpClientWorker::doWork);
+    connect(httpClientThread, &QThread::started, httpClientWorker, &HttpClientWorker::startClient);
 
     connect(httpClientWorker, &HttpClientWorker::finished, httpClientThread, &QThread::quit);
 }
 
 void MainWindow::startHttpClientThread()
 {
-    if (!httpClientThread->isRunning())
+    if (!httpClientWorker->isStarted)
     {
         httpClientThread->start();
     }

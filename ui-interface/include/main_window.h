@@ -5,6 +5,7 @@
 #include"data_plotter.h"
 #include "http_client_worker.h"
 #include <QMainWindow>
+#include <QMetaType>
 #include <QThread>
 #include <QTimer>
 #include <QtCharts/QChartView>

@@ -9,9 +9,10 @@ enum class LogLevel
 {
     Debug,
     Info,
-    Warn,
+    Warning,
     Error
 };
+Q_DECLARE_METATYPE(LogLevel)
 
 class Logger : public QObject
 {

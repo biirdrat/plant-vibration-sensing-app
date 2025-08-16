@@ -1,6 +1,8 @@
 #include "http_client_worker.h"
 
 HttpClientWorker::HttpClientWorker(QObject *parent)
+    : isStarted(false)
+    , logger(&Logger::getInstance())
 {
 
 }
@@ -10,13 +12,18 @@ HttpClientWorker::~HttpClientWorker()
 
 }
 
-void HttpClientWorker::doWork()
+void HttpClientWorker::startClient()
+{
+    runClient();
+}
+
+void HttpClientWorker::runClient()
 {
     while (!QThread::currentThread()->isInterruptionRequested()) 
     {
-        // ... do work ...
+         logger->log(LogLevel::Info, "RUNNING!");
 
-        QThread::msleep(10);
+        QThread::msleep(1000);
     }
     std::cout << "HERE";
     emit finished();
