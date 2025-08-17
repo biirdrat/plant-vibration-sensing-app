@@ -3,6 +3,7 @@
 
 #include "httplib.h"
 #include "logger.h"
+#include "json.hpp"
 #include <QObject>
 #include <QThread>
 #include <iostream>
