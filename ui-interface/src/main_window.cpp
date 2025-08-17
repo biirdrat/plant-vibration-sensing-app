@@ -87,7 +87,7 @@ void MainWindow::initializeHttpClientThread()
 
 void MainWindow::startHttpClientThread()
 {
-    if (!httpClientWorker->isStarted)
+    if (!httpClientThread->isRunning())
     {
         httpClientThread->start();
     }

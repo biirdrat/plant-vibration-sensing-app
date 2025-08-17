@@ -13,18 +13,18 @@ class HttpClientWorker : public QObject
 public:
     explicit HttpClientWorker(QObject *parent = nullptr);
     ~HttpClientWorker();
-    bool isStarted;
     
 private:
+    void configureClient();
     void runClient();
     Logger* logger;
+    std::unique_ptr<httplib::Client> httpClient;
 
 public slots:
     void startClient();
     
 signals:
     void finished();
-
 };
 
 #endif
