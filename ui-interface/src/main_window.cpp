@@ -100,5 +100,5 @@ void MainWindow::stopHttpClientThread()
 
 void MainWindow::onMainLoopTick()
 {
-    std::cout << httpClientThread->isRunning() << std::endl;
+
 }

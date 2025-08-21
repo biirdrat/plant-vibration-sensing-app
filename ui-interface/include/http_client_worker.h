@@ -19,7 +19,7 @@ public:
     
 private:
     static constexpr int NUM_SENSORS = 4;
-    static constexpr int MAX_DATA_VALUES = 100;
+    static constexpr int MAX_DATA_VALUES = 10;
     Logger* logger;
     std::unique_ptr<httplib::Client> httpClient;
     std::vector<std::vector<int>> sensorDataVecs;
