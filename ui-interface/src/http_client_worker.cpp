@@ -8,13 +8,18 @@ namespace
 HttpClientWorker::HttpClientWorker(QObject *parent)
     : logger(&Logger::getInstance())
     , httpClient(std::make_unique<httplib::Client>(SERVER_ADDRESS))
+    , sensorDataVecs(NUM_SENSORS)
 {
     configureClient();
+
+    for(int vecIdx = 0; vecIdx < NUM_SENSORS; vecIdx++)
+    {
+        sensorDataVecs[vecIdx].reserve(MAX_DATA_VALUES);
+    }
 }
 
 HttpClientWorker::~HttpClientWorker()
 {
-
 }
 
 void HttpClientWorker::configureClient()
@@ -58,6 +63,36 @@ void HttpClientWorker::runClient()
 
         QThread::msleep(1000);
     }
-    std::cout << "HERE";
     emit finished();
+}
+
+void HttpClientWorker::parseData(const std::string& payload)
+{
+    try
+    {
+        nlohmann::json jsonDoc = nlohmann::json::parse(payload);
+
+        // Validate top-level type
+        if (!jsonDoc.is_object()) 
+        {
+            logger->log(LogLevel::Warning, "Error: Top-level JSON must be an object.");
+            return;
+        }
+
+        if (jsonDoc.empty())
+        {
+            logger->log(LogLevel::Warning, "Error: JSON object is empty.");
+            return;
+        }
+
+        for(int sensorIdx = 0; sensorIdx < NUM_SENSORS; sensorIdx++)
+        {
+            
+        }
+    }
+    catch(const std::exception& e)
+    {
+        logger->log(LogLevel::Warning, "JSON Payload received is in incorrect format.");
+    }
+    
 }
