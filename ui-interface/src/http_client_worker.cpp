@@ -2,7 +2,7 @@
 
 namespace 
 {
-    constexpr const char* SERVER_ADDRESS = "http://httpbin.org";
+    constexpr const char* SERVER_ADDRESS = "http://192.168.4.1";
 }
 
 HttpClientWorker::HttpClientWorker(QObject *parent)
@@ -36,26 +36,31 @@ void HttpClientWorker::configureClient()
 
 void HttpClientWorker::startClient()
 {   
-    auto response = httpClient->Get("/hello");
+    httplib::Result response = httpClient->Get("/link");
 
-    if(response)
+    if(response && response->status == 200)
     {
         logger->log(LogLevel::Info, "Successfully got response from server.");
-        logger->log(LogLevel::Info, "Response body: " + QString::fromStdString(response->body));
         
-        if(response->body != "Client successfully linked with server.")
+        if(response->body != "Link Successful")
         {
             logger->log(LogLevel::Warning, "Server is already linked with client, failed to connect.");
             emit finished();
         }
         else
         {
+            logger->log(LogLevel::Info, "Client Linked with Server Successfully.");
             runClient();
         }
     }
+    else if(response && !(response->status == 200))
+    {
+        logger->log(LogLevel::Warning, "Server could not find handle for link request.");
+        emit finished();
+    }
     else
     {
-        logger->log(LogLevel::Warning, "Failed to get a response from the server.");
+        logger->log(LogLevel::Warning, "Server was not found.");
         emit finished();
     }
 }
@@ -64,9 +69,18 @@ void HttpClientWorker::runClient()
 {
     while (!QThread::currentThread()->isInterruptionRequested()) 
     {
-         logger->log(LogLevel::Info, "RUNNING!");
+        httplib::Result response = httpClient->Get("/data");
+        if(response && response->status == 200)
+        {
+            parseData(response->body);
+        }
+        else
+        {
+            logger->log(LogLevel::Warning, "Failed to get valid response from server.");
+            break;
+        }
 
-        QThread::msleep(1000);
+        QThread::msleep(10);
     }
     emit finished();
 }
@@ -90,13 +104,14 @@ void HttpClientWorker::parseData(const std::string& payload)
             return;
         }
 
+        // Loop through each sensor data payload
         for(int sensorIdx = 0; sensorIdx < NUM_SENSORS; sensorIdx++)
         {
             std::string key = "sensor" + std::to_string(sensorIdx);
 
             if (!jsonDoc.contains(key)) 
             {
-                logger->log(LogLevel::Warning, QString::fromStdString("Warning: Missing key: " + key));
+                // logger->log(LogLevel::Warning, QString::fromStdString("Warning: Missing key: " + key));
                 break;
             }
 
