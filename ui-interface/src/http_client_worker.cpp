@@ -12,14 +12,15 @@ HttpClientWorker::HttpClientWorker(QObject *parent)
 {
     configureClient();
 
+    // Initialize sensor data vectors
     for(int vecIdx = 0; vecIdx < NUM_SENSORS; vecIdx++)
     {
         sensorDataVecs[vecIdx].resize(MAX_DATA_VALUES);
     }
 
-    // parseData("{\"sensor0\":[12,45,78,23,56,89,34,67,90,11]}");
+    // parseData("{\"sensordata\":[0,45,78,23,56,89,34,67,90,11]}");
     // logger->log(LogLevel::Warning,
-    //         QString("%1").arg(sensorDataVecs.at(0).at(1)));
+    //         QString("%1").arg(sensorDataVecs.at(0).at(0)));
 
 }
 
@@ -103,43 +104,47 @@ void HttpClientWorker::parseData(const std::string& payload)
             logger->log(LogLevel::Warning, "Warning: JSON object is empty.");
             return;
         }
+        
+        std::string datakey = "sensordata";
 
-        // Loop through each sensor data payload
-        for(int sensorIdx = 0; sensorIdx < NUM_SENSORS; sensorIdx++)
+        if (!jsonDoc.contains(datakey)) 
         {
-            std::string key = "sensor" + std::to_string(sensorIdx);
+            logger->log(LogLevel::Warning, QString::fromStdString("Warning: Missing key: " + datakey));
+            return;
+        }
 
-            if (!jsonDoc.contains(key)) 
-            {
-                // logger->log(LogLevel::Warning, QString::fromStdString("Warning: Missing key: " + key));
-                break;
-            }
+        if (!jsonDoc[datakey].is_array())
+        {
+            logger->log(LogLevel::Warning, QString::fromStdString("Data is not an array."));
+            return;
+        }
 
-            if (!jsonDoc[key].is_array())
-            {
-                logger->log(LogLevel::Warning, QString::fromStdString(key + " data is not an array."));
-                break;
-            }
+        if(!(jsonDoc[datakey][0].is_number_integer()))
+        {   
+            logger->log(LogLevel::Warning, QString::fromStdString("First value in data array is not a number."));
+            return;
+        }
 
-            if(jsonDoc[key].size() < MAX_DATA_VALUES)
+        int sensorIdx = jsonDoc[datakey][0].get<int>();
+
+
+        for(int valIdx = 1; valIdx < MAX_DATA_VALUES+1; valIdx++)
+        {
+            if(jsonDoc[datakey][valIdx].is_number_integer())
             {
-                logger->log(LogLevel::Warning, QString::fromStdString(key + " is missing data values."));
-                break;
+                sensorDataVecs[sensorIdx].at(valIdx-1) = jsonDoc[datakey][valIdx].get<int>();
             }
-            
-            for(int valIdx = 0; valIdx < MAX_DATA_VALUES; valIdx++)
+            else
             {
-                if(jsonDoc[key][valIdx].is_number_integer())
-                {
-                    sensorDataVecs[sensorIdx].at(valIdx) = jsonDoc[key][valIdx].get<int>();
-                }
-                else
-                {
-                    logger->log(LogLevel::Warning,
-                                QString("Warning: sensor%1 value%2 is not an integer.").arg(sensorIdx, valIdx));
-                }
+                logger->log(LogLevel::Warning,
+                    QString("Warning: sensor%1 value%2 is not an integer.")
+                        .arg(sensorIdx)
+                        .arg(valIdx - 1)
+                );
+                break;
             }
         }
+
     }
     catch(const std::exception& e)
     {
