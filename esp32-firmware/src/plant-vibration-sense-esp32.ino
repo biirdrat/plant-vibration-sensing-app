@@ -88,12 +88,21 @@ void setup()
 
   // initializeAsyncWebServer();
 
-  initializeSpiMaster();
+  bool spiInitialized = initializeSpiMaster();
+
+  if(!spiInitialized)
+  {
+    printToSerial("SPI Failed to initialized, program stopped.\n");
+    while(1)
+    {
+      delay(1000);
+    }
+  }
 
   // Set onboard LED high
   digitalWrite(LED_PIN, HIGH);
 
-  printToSerial("Main Program Running!\n");
+  printToSerial("\nMain Program Running!\n");
 }
 
 void loop() 
@@ -147,15 +156,37 @@ void initializeAsyncWebServer()
   espWebServer.begin();
 }
 
-void initializeSpiMaster()
+bool initializeSpiMaster()
 {
+  bool initializedSuccessfully = false;
+
+  // Start SPO
   spiMaster.begin();
   SPISettings settings(SPI_CLOCK_SPEED, MSBFIRST, SPI_MODE3);
   spiMaster.beginTransaction(settings);
-  digitalWrite(SS, LOW);
-  requestSpiReadRegister(ID_REGISTER);
-  spiRead(2);
 
+  // Set chip select to low to communicate to ADC
+  digitalWrite(SS, LOW);
+
+  // Read value in ID Register
+  uint32_t idValue = readSpiRegister(ID_REGISTER);
+  
+  // Check if ID Value is Valid
+  if(idValue == 0)
+  {
+    printToSerial("SPI communication with ADC failed to initialize. A value was not read.\n");
+  }
+  else if((idValue & 0xFF0) != 0xCD0)
+  {
+    printToSerial("SPI communication with ADC failed to initialize. Invalid ID Register Value Read: 0x%08X\n", idValue);
+  }
+  else
+  {
+    printToSerial("SPI communication with ADC initialized successfully. ID Register Value Read: 0x%08X\n", idValue);
+    initializedSuccessfully = true;
+  }
+
+  return initializedSuccessfully;
 }
 
 void spiWriteByte(byte dataByte)
@@ -173,27 +204,34 @@ uint32_t spiRead(int numBytes)
     {
       // Read one byte from SPI
       uint8_t byteRead = spiMaster.transfer(0x00);
-      Serial.println(byteRead);
 
       // Shift left so MSB comes first
       valueRead = (valueRead << 8) | byteRead;
     }
   }
 
-  printToSerial("Value read: 0x%08lX\n", valueRead);
   return valueRead;
 }
 
 uint32_t readSpiRegister(uint8_t registerNum)
 {
+  uint32_t valueRead = 0;
 
-}
-
-void requestSpiReadRegister(byte reg)
-{
-  byte writeByte = 0b01000000 | (reg & 0b00111111);
-  Serial.println(writeByte);
+  // Specify read request and which register by writing to communications register
+  byte writeByte = 0b01000000 | (registerNum & 0b00111111);
   spiMaster.transfer(writeByte);
+
+  // Read number of bytes based on register
+  switch(registerNum)
+  {
+    case ID_REGISTER:
+    {
+      valueRead = spiRead(2);
+      break;
+    }
+  }
+
+  return valueRead;
 }
 
 void handleLinkRequest(AsyncWebServerRequest *request)
