@@ -6,7 +6,8 @@
   
   Libraries used
   - ESPAsyncWebServer by ESP32ASync 3.7.10
-  - AsyncTCP 1.1.4
+  - AsyncTCP by ESP32Async 3.4.7
+  - ArduinoJson 7.4.2
 */
 
 #include <WiFi.h>
@@ -233,6 +234,11 @@ uint32_t readSpiRegister(uint8_t registerNum)
 
   return valueRead;
 }
+
+// void writeSpiRegister(uint8_t registerNum, uint8_t numBytes, uint32_t writeData)
+// {
+
+// }
 
 void handleLinkRequest(AsyncWebServerRequest *request)
 {
