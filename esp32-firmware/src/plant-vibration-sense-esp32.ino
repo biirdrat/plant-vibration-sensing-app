@@ -91,14 +91,16 @@ void setup()
 
   bool spiInitialized = initializeSpiMaster();
 
-  if(!spiInitialized)
-  {
-    printToSerial("SPI Failed to initialized, program stopped.\n");
-    while(1)
-    {
-      delay(1000);
-    }
-  }
+  configureADS7175();
+
+  // if(!spiInitialized)
+  // {
+  //   printToSerial("SPI Failed to initialized, program stopped.\n");
+  //   while(1)
+  //   {
+  //     delay(1000);
+  //   }
+  // }
 
   // Set onboard LED high
   digitalWrite(LED_PIN, HIGH);
@@ -190,6 +192,22 @@ bool initializeSpiMaster()
   return initializedSuccessfully;
 }
 
+void configureADS7175()
+{
+  // Enable channel 1 AIN0 is positive input and AIN1 is negative input
+  writeSpiRegister(CHANNEL0_REGISTER, 4, 0x8001);
+
+  // Disable channel 2
+  writeSpiRegister(CHANNEL1_REGISTER, 4, 0x0000);
+
+  // Disable channel 3
+  writeSpiRegister(CHANNEL2_REGISTER, 4, 0x0000);
+
+  // Disable channel 4
+  writeSpiRegister(CHANNEL3_REGISTER, 4, 0x0000);
+
+}
+
 void spiWriteByte(byte dataByte)
 {
   spiMaster.transfer(dataByte);
@@ -235,10 +253,22 @@ uint32_t readSpiRegister(uint8_t registerNum)
   return valueRead;
 }
 
-// void writeSpiRegister(uint8_t registerNum, uint8_t numBytes, uint32_t writeData)
-// {
+void writeSpiRegister(uint8_t registerNum, uint8_t numBytes, uint32_t writeData)
+{
 
-// }
+  // Specify write request and which register by writing to communications register
+  byte writeByte = 0b00000000 | (registerNum & 0b00111111);
+  spiMaster.transfer(writeByte);
+
+  if(numBytes > 0 && numBytes <= 4)
+  {
+    for(int byteIdx = (numBytes-1); byteIdx >= 0; byteIdx--)
+    {
+      uint8_t dataByte = (uint8_t)((writeData >> (byteIdx * 8)) & 0xFF);
+      spiMaster.transfer(dataByte);
+    }
+  }
+}
 
 void handleLinkRequest(AsyncWebServerRequest *request)
 {
