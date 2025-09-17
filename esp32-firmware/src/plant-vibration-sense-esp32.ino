@@ -49,7 +49,7 @@ const char* password = "12345678";
 const IPAddress localIP(192, 168, 4, 1);
 const IPAddress gateway(192, 168, 4, 1);
 const IPAddress subnet(255, 255, 255, 0);
-const uint32_t SPI_CLOCK_SPEED = 1000000;
+const uint32_t SPI_CLOCK_SPEED = 16000000;
 const uint16_t NUM_DATA_VALUES = 200;
 const uint16_t PRINT_BUFFER_SIZE = 2000;
 const uint8_t LED_PIN = 2;
@@ -89,18 +89,14 @@ void setup()
 
   // initializeAsyncWebServer();
 
-  bool spiInitialized = initializeSpiMaster();
+
+  while(!initializeADS7175Spi())
+  {
+    printToSerial("SPI Failed to initialized, retrying...\n");
+    delay(1000);
+  }
 
   configureADS7175();
-
-  // if(!spiInitialized)
-  // {
-  //   printToSerial("SPI Failed to initialized, program stopped.\n");
-  //   while(1)
-  //   {
-  //     delay(1000);
-  //   }
-  // }
 
   // Set onboard LED high
   digitalWrite(LED_PIN, HIGH);
@@ -159,17 +155,18 @@ void initializeAsyncWebServer()
   espWebServer.begin();
 }
 
-bool initializeSpiMaster()
+bool initializeADS7175Spi()
 {
   bool initializedSuccessfully = false;
 
-  // Start SPO
+  // Start SPI
   spiMaster.begin();
   SPISettings settings(SPI_CLOCK_SPEED, MSBFIRST, SPI_MODE3);
   spiMaster.beginTransaction(settings);
 
-  // Set chip select to low to communicate to ADC
-  digitalWrite(SS, LOW);
+  // Reset ADS7175 SPI
+  digitalWrite(SS, HIGH);
+  delay(1000);
 
   // Read value in ID Register
   uint32_t idValue = readSpiRegister(ID_REGISTER);
@@ -177,10 +174,12 @@ bool initializeSpiMaster()
   // Check if ID Value is Valid
   if(idValue == 0)
   {
+    spiMaster.endTransaction();
     printToSerial("SPI communication with ADC failed to initialize. A value was not read.\n");
   }
   else if((idValue & 0xFF0) != 0xCD0)
   {
+    spiMaster.endTransaction();
     printToSerial("SPI communication with ADC failed to initialize. Invalid ID Register Value Read: 0x%08X\n", idValue);
   }
   else
@@ -194,18 +193,36 @@ bool initializeSpiMaster()
 
 void configureADS7175()
 {
+
   // Enable channel 1 AIN0 is positive input and AIN1 is negative input
-  writeSpiRegister(CHANNEL0_REGISTER, 4, 0x8001);
+  writeSpiRegister(CHANNEL0_REGISTER, 2, 0x8001);
 
   // Disable channel 2
-  writeSpiRegister(CHANNEL1_REGISTER, 4, 0x0000);
+  writeSpiRegister(CHANNEL1_REGISTER, 2, 0x0000);
 
   // Disable channel 3
-  writeSpiRegister(CHANNEL2_REGISTER, 4, 0x0000);
+  writeSpiRegister(CHANNEL2_REGISTER, 2, 0x0000);
 
   // Disable channel 4
-  writeSpiRegister(CHANNEL3_REGISTER, 4, 0x0000);
+  writeSpiRegister(CHANNEL3_REGISTER, 2, 0x0000);
 
+  // Configure Setup 0
+  writeSpiRegister(SETUP_CONFIG0_REGISTER, 2, 0x0F00);
+
+  // Configure Filter 0
+  writeSpiRegister(FILTER_CONFIG0_REGISTER, 2, 0x0504);
+
+  // Configure Offset 0
+  writeSpiRegister(OFFSET0_REGISTER, 3, 0x000000);
+
+  // Configure Gain 0
+  writeSpiRegister(GAIN0_REGISTER, 3, 0x000000);
+
+  // Configure ADC Mode
+  writeSpiRegister(ADC_MODE_REGISTER, 2, 0x000000);
+
+  // Configure Interface Mode
+  writeSpiRegister(INTERFACE_MODE_REGISTER, 2, 0x000000);
 }
 
 void spiWriteByte(byte dataByte)
@@ -234,6 +251,9 @@ uint32_t spiRead(int numBytes)
 
 uint32_t readSpiRegister(uint8_t registerNum)
 {
+  // Enable Chip Select
+  digitalWrite(SS, LOW);
+
   uint32_t valueRead = 0;
 
   // Specify read request and which register by writing to communications register
@@ -248,13 +268,30 @@ uint32_t readSpiRegister(uint8_t registerNum)
       valueRead = spiRead(2);
       break;
     }
+
+    case SETUP_CONFIG0_REGISTER:
+    {
+      valueRead = spiRead(2);
+      break;
+    }
+    
+    case FILTER_CONFIG0_REGISTER:
+    {
+      valueRead = spiRead(2);
+      break;
+    }
   }
+
+  // Disable Chip Select
+  digitalWrite(SS, HIGH);
 
   return valueRead;
 }
 
 void writeSpiRegister(uint8_t registerNum, uint8_t numBytes, uint32_t writeData)
 {
+  // Enable Chip Select
+  digitalWrite(SS, LOW);
 
   // Specify write request and which register by writing to communications register
   byte writeByte = 0b00000000 | (registerNum & 0b00111111);
@@ -264,10 +301,14 @@ void writeSpiRegister(uint8_t registerNum, uint8_t numBytes, uint32_t writeData)
   {
     for(int byteIdx = (numBytes-1); byteIdx >= 0; byteIdx--)
     {
+      
       uint8_t dataByte = (uint8_t)((writeData >> (byteIdx * 8)) & 0xFF);
       spiMaster.transfer(dataByte);
     }
   }
+
+  // Disable Chip Select
+  digitalWrite(SS, HIGH);
 }
 
 void handleLinkRequest(AsyncWebServerRequest *request)
