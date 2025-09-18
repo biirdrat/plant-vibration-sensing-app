@@ -83,11 +83,11 @@ void setup()
 
   initializeGpioPins();
 
-  // initializeDataJson();
+  initializeDataJson();
 
-  // initializeWifiAp();
+  initializeWifiAp();
 
-  // initializeAsyncWebServer();
+  initializeAsyncWebServer();
 
 
   while(!initializeADS7175Spi())
@@ -106,7 +106,18 @@ void setup()
 
 void loop() 
 {
-
+  uint32_t dataValue = readSpiRegister(DATA_REGISTER);
+  // uint32_t offset = 0x800000;
+  // if(dataValue > offset)
+  // {
+  //   dataValue-=offset;
+  // }
+  // else
+  // {
+  //   dataValue = 0;
+  // }
+  Serial.println(dataValue);
+  delay(1000);
 }
 
 void initializeGpioPins()
@@ -177,7 +188,7 @@ bool initializeADS7175Spi()
     spiMaster.endTransaction();
     printToSerial("SPI communication with ADC failed to initialize. A value was not read.\n");
   }
-  else if((idValue & 0xFF0) != 0xCD0)
+  else if((idValue & 0xFFF) != 0xCDE)
   {
     spiMaster.endTransaction();
     printToSerial("SPI communication with ADC failed to initialize. Invalid ID Register Value Read: 0x%08X\n", idValue);
@@ -207,19 +218,22 @@ void configureADS7175()
   writeSpiRegister(CHANNEL3_REGISTER, 2, 0x0000);
 
   // Configure Setup 0
-  writeSpiRegister(SETUP_CONFIG0_REGISTER, 2, 0x0F00);
+  writeSpiRegister(SETUP_CONFIG0_REGISTER, 2, 0x0000);
 
   // Configure Filter 0
   writeSpiRegister(FILTER_CONFIG0_REGISTER, 2, 0x0504);
 
   // Configure Offset 0
-  writeSpiRegister(OFFSET0_REGISTER, 3, 0x000000);
+  writeSpiRegister(OFFSET0_REGISTER, 3, 0x500000);
+
+  uint32_t value = readSpiRegister(OFFSET0_REGISTER);
+  Serial.println(value);
 
   // Configure Gain 0
-  writeSpiRegister(GAIN0_REGISTER, 3, 0x000000);
+  writeSpiRegister(GAIN0_REGISTER, 3, 0xF00000);
 
   // Configure ADC Mode
-  writeSpiRegister(ADC_MODE_REGISTER, 2, 0x000000);
+  writeSpiRegister(ADC_MODE_REGISTER, 2, 0x0010);
 
   // Configure Interface Mode
   writeSpiRegister(INTERFACE_MODE_REGISTER, 2, 0x000000);
@@ -280,6 +294,18 @@ uint32_t readSpiRegister(uint8_t registerNum)
       valueRead = spiRead(2);
       break;
     }
+
+    case DATA_REGISTER:
+    {
+      valueRead = spiRead(3);
+      break;
+    }
+
+    case OFFSET0_REGISTER:
+    {
+      valueRead = spiRead(3);
+      break;
+    }
   }
 
   // Disable Chip Select
@@ -301,7 +327,6 @@ void writeSpiRegister(uint8_t registerNum, uint8_t numBytes, uint32_t writeData)
   {
     for(int byteIdx = (numBytes-1); byteIdx >= 0; byteIdx--)
     {
-      
       uint8_t dataByte = (uint8_t)((writeData >> (byteIdx * 8)) & 0xFF);
       spiMaster.transfer(dataByte);
     }
